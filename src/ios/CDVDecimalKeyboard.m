@@ -1,15 +1,15 @@
+
 #import <WebKit/WebKit.h>
 
 #import "CDVDecimalKeyboard.h"
 
 @implementation CDVDecimalKeyboard
 
-UIView* keyPlane; // view to which we will add button
-CGRect decimalButtonRect;
-UIColor* decimalButtonBGColor;
+UIView* ui;
+CGRect cgButton;
+BOOL isDecimalKeyRequired=YES;
 UIButton *decimalButton;
 BOOL isAppInBackground=NO;
-
 - (void)pluginInitialize {
     [[NSNotificationCenter defaultCenter] addObserver: self
                                              selector: @selector(keyboardWillAppear:)
@@ -27,9 +27,9 @@ BOOL isAppInBackground=NO;
                                              selector:@selector(appDidBecomeActive:)
                                                  name:UIApplicationDidBecomeActiveNotification
                                                object:nil];
-    decimalButtonBGColor = [UIColor colorWithRed:1.0 green:1.0 blue:1.0 alpha:0.0];
+    
+    
 }
-
 - (void) appWillResignActive: (NSNotification*) n{
     isAppInBackground = YES;
     [self removeDecimalButton];
@@ -43,11 +43,12 @@ BOOL isAppInBackground=NO;
     }
 }
 
-- (void) keyboardWillDisappear: (NSNotification*) n {
+
+- (void) keyboardWillDisappear: (NSNotification*) n{
     [self removeDecimalButton];
 }
 
-- (void) setDecimalChar {
+-(void) setDecimalChar {
     [self evaluateJavaScript:@"DecimalKeyboardMR.getDecimalChar();"
            completionHandler:^(NSString * _Nullable response, NSError * _Nullable error) {
                if (response) {
@@ -56,14 +57,14 @@ BOOL isAppInBackground=NO;
            }];
 }
 
-- (void) addDecimalButton {
+- (void) addDecimalButton{
     if ( UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad )
     {
         return ; /* Device is iPad and this code works only in iPhone*/
     }
     decimalButton = [UIButton buttonWithType:UIButtonTypeCustom];
     [self setDecimalChar];
-    [decimalButton setTitleColor:UIColor.blackColor forState:UIControlStateNormal];
+    [decimalButton setTitleColor:[UIColor colorWithRed:0/255.0 green:0/255.0 blue:0/255.0 alpha:1.0] forState:UIControlStateNormal];
     decimalButton.titleLabel.font = [UIFont systemFontOfSize:40.0];
     [decimalButton addTarget:self action:@selector(buttonPressed:)
             forControlEvents:UIControlEventTouchUpInside];
@@ -72,12 +73,10 @@ BOOL isAppInBackground=NO;
     [decimalButton addTarget:self action:@selector(buttonPressCancel:)
             forControlEvents:UIControlEventTouchUpOutside];
     
+    
     decimalButton.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
     [decimalButton setTitleEdgeInsets:UIEdgeInsetsMake(-20.0f, 0.0f, 0.0f, 0.0f)];
-    [decimalButton setBackgroundColor:decimalButtonBGColor];
-    
-    decimalButton.layer.cornerRadius = 10;
-    decimalButton.clipsToBounds = YES;
+    [decimalButton setBackgroundColor: [UIColor colorWithRed:210/255.0 green:213/255.0 blue:218/255.0 alpha:1.0]];
     
     // locate keyboard view
     UIWindow* tempWindow = nil;
@@ -97,36 +96,46 @@ BOOL isAppInBackground=NO;
             }
         }
     }
+
     
     UIView* keyboard;
     for(int i=0; i<[tempWindow.subviews count]; i++) {
         keyboard = [tempWindow.subviews objectAtIndex:i];
-        decimalButtonRect = CGRectMake(0.0, 0.0, 0.0, 0.0);
-        [self calculateDecimalButtonRect:keyboard];
-        NSLog(@"Positioning decimalButton at %@", NSStringFromCGRect(decimalButtonRect));
-        decimalButton.frame = decimalButtonRect;
-        [keyPlane addSubview:decimalButton];
+        [self listSubviewsOfView: keyboard];
+        decimalButton.frame = cgButton;
+        [ui addSubview:decimalButton];
     }
 }
-
 - (void) removeDecimalButton{
     [decimalButton removeFromSuperview];
     decimalButton=nil;
+    stopSearching=NO;
+    
 }
+- (void) deleteDecimalButton{
+    [decimalButton removeFromSuperview];
+    decimalButton=nil;
+    stopSearching=NO;
+}
+BOOL isDifferentKeyboardShown=NO;
 
 - (void) keyboardWillAppear: (NSNotification*) n{
     NSDictionary* info = [n userInfo];
     NSNumber* value = [info objectForKey:UIKeyboardAnimationDurationUserInfoKey];
     double dValue = [value doubleValue];
     
-    if (0.0 <= dValue) {
-        dispatch_time_t delay = dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC * dValue);
-        dispatch_after(delay, dispatch_get_main_queue(), ^(void){
-            [self processKeyboardShownEvent];
-        });
+    if(dValue <= 0.0){
+        [self removeDecimalButton];
+        return;
     }
+    
+    dispatch_time_t delay = dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC * dValue);
+    dispatch_after(delay, dispatch_get_main_queue(), ^(void){
+        [self processKeyboardShownEvent];
+    });
+    
+    
 }
-
 - (void) processKeyboardShownEvent{
     [self isTextAndDecimal:^(BOOL isDecimalKeyRequired) {
         // create custom button
@@ -146,15 +155,15 @@ BOOL isAppInBackground=NO;
 }
 
 - (void)buttonPressed:(UIButton *)button {
-    [decimalButton setBackgroundColor: decimalButtonBGColor];
+    [decimalButton setBackgroundColor: [UIColor colorWithRed:210/255.0 green:213/255.0 blue:218/255.0 alpha:1.0]];
     [self evaluateJavaScript:@"DecimalKeyboardMR.addDecimal();" completionHandler:nil];
 }
 
 - (void)buttonTapped:(UIButton *)button {
-    [decimalButton setBackgroundColor:UIColor.whiteColor];
+    [decimalButton setBackgroundColor: [UIColor colorWithRed:255/255.0 green:255/255.0 blue:255/255.0 alpha:1.0]];
 }
 - (void)buttonPressCancel:(UIButton *)button{
-    [decimalButton setBackgroundColor:decimalButtonBGColor];
+    [decimalButton setBackgroundColor: [UIColor colorWithRed:210/255.0 green:213/255.0 blue:218/255.0 alpha:1.0]];
 }
 
 - (void) isTextAndDecimal:(void (^)(BOOL isTextAndDecimal))completionHandler {
@@ -175,30 +184,48 @@ BOOL isAppInBackground=NO;
            }];
 }
 
-- (void)calculateDecimalButtonRect:(UIView *)view {
-    for (UIView *subview in [view subviews]) {
-        if([[subview description] hasPrefix:@"<UIKBKeyplaneView"] == YES) {
-            keyPlane = subview;
-            for(UIView *v in subview.subviews) {
-                if([[v description] hasPrefix:@"<UIKBKeyView"] == YES) {
-                    if (decimalButtonRect.size.width == 0) {
-                        decimalButtonRect = v.frame;  // Initialize by copying button frame
-                    } else {
-                        decimalButtonRect.origin.x = MIN(decimalButtonRect.origin.x, v.frame.origin.x);
-                        decimalButtonRect.origin.y = MAX(decimalButtonRect.origin.y, v.frame.origin.y);
-                        decimalButtonRect.size.height = MAX(decimalButtonRect.size.height, v.frame.size.height);
-                        decimalButtonRect.size.width = MAX(decimalButtonRect.size.width, v.frame.size.width);
-                    }
+BOOL stopSearching=NO;
+- (void)listSubviewsOfView:(UIView *)view {
+    
+    // Get the subviews of the view
+    NSArray *subviews = [view subviews];
+    
+    // Return if there are no subviews
+    if ([subviews count] == 0) return; // COUNT CHECK LINE
+    
+    for (UIView *subview in subviews) {
+        if(stopSearching==YES){
+            break;
+        }
+        if([[subview description] hasPrefix:@"<UIKBKeyplaneView"] == YES){
+            ui = subview;
+            stopSearching = YES;
+            CGFloat height= 0.0;
+            CGFloat width=0.0;
+            CGFloat x = 0;
+            CGFloat y =ui.frame.size.height;
+            for(UIView *nView in ui.subviews){
+                
+                if([[nView description] hasPrefix:@"<UIKBKeyView"] == YES){
+                    //all keys of same size;
+                    height = nView.frame.size.height;
+                    width = nView.frame.size.width-1.5;
+                    y = y-(height-1);
+                    cgButton = CGRectMake(x, y, width, height);
+                    break;
+                    
                 }
+                
             }
         }
-        [self calculateDecimalButtonRect:subview];
+        
+        [self listSubviewsOfView:subview];
     }
 }
 
 - (void) evaluateJavaScript:(NSString *)script
           completionHandler:(void (^ _Nullable)(NSString * _Nullable response, NSError * _Nullable error))completionHandler {
-    
+
     if ([self.webView isKindOfClass:UIWebView.class]) {
         UIWebView *webview = (UIWebView*)self.webView;
         NSString *response = [webview stringByEvaluatingJavaScriptFromString:script];
@@ -218,4 +245,3 @@ BOOL isAppInBackground=NO;
 }
 
 @end
-
