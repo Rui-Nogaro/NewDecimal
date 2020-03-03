@@ -73,7 +73,7 @@ BOOL isAppInBackground=NO;
             forControlEvents:UIControlEventTouchUpOutside];
     
     decimalButton.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
-    [decimalButton setTitleEdgeInsets:UIEdgeInsetsMake(0.0f, 0.0f, 0.0f, 0.0f)];
+    [decimalButton setTitleEdgeInsets:UIEdgeInsetsMake(-20.0f, 0.0f, 0.0f, 0.0f)];
     [decimalButton setBackgroundColor:decimalButtonBGColor];
     
     decimalButton.layer.cornerRadius = 10;
